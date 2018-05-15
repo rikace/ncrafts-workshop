@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Common\Helpers.fs" />
+    <Compile Include="Common\Interfaces.fs" />
+    <Compile Include="Module1\ApplyAndTraverse.fs" />
+    <Compile Include="Module1\TaskComposition.fs" />
+    <Compile Include="Module2\Pipeline.fs" />
+    <Compile Include="Module2\TaskAsComplete.fs" />
+    <Compile Include="Module3\ReactiveAgent.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+</Project>
