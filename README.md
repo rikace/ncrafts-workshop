@@ -59,5 +59,7 @@ Install:
 https://code.visualstudio.com/download
 
 Extensions to install (docs[https://code.visualstudio.com/docs/editor/extension-gallery]):
+
 C# : https://marketplace.visualstudio.com/items?itemName=ms-vscode.csharp 
+
 Ionide-fsharp : https://marketplace.visualstudio.com/items?itemName=Ionide.Ionide-fsharp 
