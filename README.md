@@ -4,9 +4,13 @@ Workshop Modern patterns of concurrent and parallel programming in .NET
 # Requirements
 
 .NET Core Sdk 2.0
+
 Mono (on unix/mac)
+
 Visual Studio Code
+
 C# extension
+
 Ionide-fsharp extension
 
 .NET Core Sdk 2.0
@@ -19,13 +23,16 @@ In the page there are also the Step-by-step instructions
 ## Prerequisites:
 
 osx
+
 windows
+
 Check if is installed correctly with dotnet --info should print:
 
 ## .NET Command Line Tools (2.0.0)
 
 Product Information:
- Version:            2.0.0
+
+Version:            2.0.0
 
 ## Mono on unix/mac
 
