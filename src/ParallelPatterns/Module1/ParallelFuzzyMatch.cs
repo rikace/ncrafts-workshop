@@ -224,7 +224,7 @@ namespace ParallelPatterns
             // Task<TOut> SelectMany<TIn, TOut>(this Task<TIn> first, Func<TIn, Task<TOut>> next)
             // Task<TOut> Select<TIn, TOut>(this Task<TIn> task, Func<TIn, TOut> projection)
             // 
-            // Then uncomment the following code, add the missing code and run it
+            // Then uncomment the following code, add the missing step (code) and run it
 
             var matchSet = Enumerable.Empty<WordDistanceStruct>();
             
@@ -234,7 +234,7 @@ namespace ParallelPatterns
             //        WordRegex.Value.Split(text).Where(w => !IgnoreWords.Contains(w)))
             //    let wordSet = words.Flatten().AsSet()
             //    // TODO (2)
-            //    from bestMatch in wordsLookup.Traverse(wl => JaroWinklerModule.bestMatchTask(wordSet, wl, threshold))
+            //    ... missing step here 
             //    select bestMatch.Flatten());
             
             
