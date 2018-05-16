@@ -24,8 +24,9 @@ namespace ParallelPatterns
 {
     public partial class ParallelFuzzyMatch
     {
-        public static void RunFuzzyMatchPipeline(string[] wordsLookup,
-            IEnumerable<string> files)
+        public static void RunFuzzyMatchPipeline(
+            string[] wordsLookup,
+            IList<string> files)
         {
             // TODO (3) : In the previous example you have implemented the Monadic operator SelectMany (usually called Bind) 
             // This operator enables the compiler to understand the monadi (LINQ) pattern, which allows you to write
@@ -47,45 +48,47 @@ namespace ParallelPatterns
             // TODO (3) Start C# Pipeline 
             var pipeline = Pipeline<string, string[]>.Create(file => File.ReadAllLinesAsync(file));
 
-            pipeline.Then(lines =>
-                {
-                    return lines.SelectMany(l => l.Split(punctuation.Value)
-                        .Where(w => !IgnoreWords.Contains(w))).AsSet();
-                })
+            pipeline
+                .Then(lines =>
+                    lines.SelectMany(l => l.Split(punctuation.Value)
+                        .Where(w => !IgnoreWords.Contains(w))).AsSet()
+                )
                 .Then(wordSet =>
-                {
-                    return wordsLookup.Traverse(wl => JaroWinklerModule.bestMatchTask(wordSet, wl, threshold));
-                })
-                .Then(matcheSet => PrintSummary(matcheSet.Flatten().AsSet()));
+                    wordsLookup.Traverse(wl => JaroWinklerModule.bestMatchTask(wordSet, wl, threshold))
+                )
+                .Then(matcheSet =>
+                    PrintSummary(matcheSet.Flatten().AsSet())
+                );
 
             foreach (var file in files)
             {
                 Console.WriteLine($"analyzing file {file}");
-                pipeline.Engueue(file);
+                pipeline.Enqueue(file);
             }
             // End C# Pipeline
             
             
             // TODO (3) Start F# Pipeline 
             var pipelineFSharp =
-                Pipeline.Pipeline<string, string[]>.Create(file => File.ReadAllLinesAsync(file))
+                Pipeline.Pipeline<string, string[]>
+                    .Create(file => File.ReadAllLinesAsync(file))
                     .Then(lines =>
-                    {
-                        return lines.SelectMany(l => l.Split(punctuation.Value)
-                            .Where(w => !IgnoreWords.Contains(w))).AsSet();
-                    })
+                        lines.SelectMany(l => l.Split(punctuation.Value)
+                            .Where(w => !IgnoreWords.Contains(w))).AsSet()
+                    )
                     .Then(wordSet =>
-                    {
-                        return wordsLookup.Traverse(wl => JaroWinklerModule.bestMatchTask(wordSet, wl, threshold));
-                    })
-                    .Then(matcheSet => matcheSet.Flatten().AsSet());
+                        wordsLookup.Traverse(wl => JaroWinklerModule.bestMatchTask(wordSet, wl, threshold))
+                    )
+                    .Then(matcheSet => 
+                        matcheSet.Flatten().AsSet()
+                    );
           
             pipelineFSharp.Execute(4, CancellationToken.None);
 
             foreach (var file in files)
             {
                 pipelineFSharp.Enqueue(file,
-                    ((tup) =>
+                    (tup =>
                     {
                         Console.WriteLine($"analyzing file {file}");
                         PrintSummary(tup.Item2);
@@ -98,7 +101,9 @@ namespace ParallelPatterns
 
 
         public static async Task<IDictionary<string, HashSet<string>>>
-            RunFuzzyMatchTaskProcessAsCompleteBasic(string[] wordsLookup, IEnumerable<string> files)
+            RunFuzzyMatchTaskProcessAsCompleteBasic(
+                string[] wordsLookup, 
+                IEnumerable<string> files)
         {
             // An alternative pattern to parallize the FuzzyMatch is the "Procces as complete"
             // The idea of this pattern is to start the execution of all the operations (tasks) 
@@ -109,44 +114,52 @@ namespace ParallelPatterns
             //
             // Here a simple implementation ::
 
-            var matcheSet = new HashSet<WordDistanceStruct>();
+            var matchSet = new HashSet<WordDistanceStruct>();
 
-            var readFileTasks = (from file in files select File.ReadAllTextAsync(file)).ToList();
+            var readFileTasks = 
+                (from file in files 
+                 select File.ReadAllTextAsync(file)
+                ).ToList();
 
             while (readFileTasks.Count > 0)
             {
                 await Task.WhenAny(readFileTasks)
-                    .ContinueWith(async readtsk =>
+                    .ContinueWith(async readTask =>
                     {
-                        var finishedReadTask = readtsk.Result;
+                        var finishedReadTask = readTask.Result;
                         readFileTasks.Remove(finishedReadTask);
 
-                        var words = WordRegex.Value.Split(finishedReadTask.Result)
+                        var words = WordRegex.Value
+                            .Split(finishedReadTask.Result)
                             .Where(w => !IgnoreWords.Contains(w));
 
-                        var matchTasks = (from wl in wordsLookup
-                            select JaroWinklerModule.bestMatchTask(words, wl, threshold)).ToList();
+                        var matchTasks = 
+                            (from wl in wordsLookup
+                             select JaroWinklerModule.bestMatchTask(words, wl, threshold)
+                            ).ToList();
 
                         while (matchTasks.Count > 0)
                         {
-                            await Task.WhenAny(matchTasks).ContinueWith(matchtsk =>
+                            await Task.WhenAny(matchTasks).ContinueWith(matchTask =>
                             {
-                                var finishedMatchTask = matchtsk.Result;
+                                var finishedMatchTask = matchTask.Result;
                                 matchTasks.Remove(finishedMatchTask);
-                                matcheSet.AddRange(finishedMatchTask.Result);
+                                matchSet.AddRange(finishedMatchTask.Result);
                             });
                         }
                     });
             }
 
-            return PrintSummary(matcheSet);
+            return PrintSummary(matchSet);
         }
 
 
         public static async Task<IDictionary<string, HashSet<string>>>
-            RunFuzzyMatchTaskProcessAsCompleteAbstracted(string[] wordsLookup, IEnumerable<string> files)
+            RunFuzzyMatchTaskProcessAsCompleteAbstracted(
+                string[] wordsLookup, 
+                IEnumerable<string> files)
         {
-            var matcheSet = new HashSet<WordDistanceStruct>();
+            var matchSet = new HashSet<WordDistanceStruct>();
 
             // TODO (4) : Implement a resuable function called "ContinueAsComplete" to abstract the implementation of the 
             // previous method "RunFuzzyMatchTaskProcessAsCompleteBasic".
@@ -161,19 +174,19 @@ namespace ParallelPatterns
             {
                 var text = await textTask;
 
-                var words = WordRegex.Value.Split(text)
+                var words = WordRegex.Value
+                    .Split(text)
                     .Where(w => !IgnoreWords.Contains(w))
                     .AsSet();
 
                 foreach (var matchTask in wordsLookup.ContinueAsComplete(
                     wl => JaroWinklerModule.bestMatchTask(words, wl, threshold)))
                 {
-                    var match = await matchTask;
-                    matcheSet.AddRange(match);
+                    matchSet.AddRange(await matchTask);
                 }
             }
 
-            return PrintSummary(matcheSet);
+            return PrintSummary(matchSet);
         }
     }
 }

@@ -13,7 +13,8 @@ namespace ParallelPatterns.Common.TaskEx
 
         public static Task<R[]> Traverse<T, R>(this IEnumerable<T> collection, Func<T, R> projection)
             => Task.FromResult(collection.Select(projection).ToArray());
-        
+
+
         public static void FromTask<TResult, TTaskResult>(
             this TaskCompletionSource<TResult> tcs, Task<TTaskResult> task, Func<TTaskResult, TResult> resultSelector)
         {

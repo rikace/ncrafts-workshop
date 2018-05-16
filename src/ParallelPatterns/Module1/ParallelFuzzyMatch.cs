@@ -15,12 +15,14 @@ namespace ParallelPatterns
     public partial class ParallelFuzzyMatch
     {
         public static IDictionary<string, HashSet<string>>
-            RunFuzzyMatchSequential(string[] wordsLookup, IEnumerable<string> files)
+            RunFuzzyMatchSequential(
+                string[] wordsLookup, 
+                IEnumerable<string> files)
         {
             // Sequential workflow -> how can we parallelize this work?
-            // The collection 'matcheSet' cannot be shared among threads  
+            // The collection 'matchSet' cannot be shared among threads  
 
-            var matcheSet = new HashSet<WordDistanceStruct>();
+            var matchSet = new HashSet<WordDistanceStruct>();
 
             foreach (var file in files)
             {
@@ -33,22 +35,24 @@ namespace ParallelPatterns
                 foreach (var wl in wordsLookup)
                 {
                     var bestMatch = JaroWinklerModule.bestMatch(words, wl, threshold);
-                    matcheSet.AddRange(bestMatch);
+                    matchSet.AddRange(bestMatch);
                 }
             }
 
-            return PrintSummary(matcheSet);
+            return PrintSummary(matchSet);
         }
         
         public static async Task<IDictionary<string, HashSet<string>>>
-            RunFuzzyMatchTaskContinuation(string[] wordsLookup, IEnumerable<string> files)
+            RunFuzzyMatchTaskContinuation(
+                string[] wordsLookup, 
+                IEnumerable<string> files)
         {
             // Let's start by converting the I/O operation to be asynchronous 
             // The continuation passing style avoids to block any threads  
             // 
             // What about the error handlimg ? and cancellation (if any) ?
 
-            var matcheSet = new HashSet<WordDistanceStruct>();
+            var matchSet = new HashSet<WordDistanceStruct>();
 
             foreach (var file in files)
             {
@@ -69,20 +73,22 @@ namespace ParallelPatterns
                             return Task.WhenAll(tasks);
                         }).Unwrap();
 
-                matcheSet.AddRange(bestMatches.Flatten());
+                matchSet.AddRange(bestMatches.Flatten());
             }
 
-            return PrintSummary(matcheSet);
+            return PrintSummary(matchSet);
         }
 
 
         public static async Task<IDictionary<string, HashSet<string>>>
-            RunFuzzyMatchBetterTaskContinuation(string[] wordsLookup, IEnumerable<string> files)
+            RunFuzzyMatchBetterTaskContinuation(
+                string[] wordsLookup, 
+                IEnumerable<string> files)
         {
             // Ideally, we should handle potential errors or cancellations
             // This is a lot of code which goes against the DRY principal
 
-            var matcheSet = new HashSet<WordDistanceStruct>();
+            var matchSet = new HashSet<WordDistanceStruct>();
 
             foreach (var file in files)
             {
@@ -90,64 +96,52 @@ namespace ParallelPatterns
                 var bestMatches = await readFileTask
                     .ContinueWith(readText =>
                     {
-                        if (readText.IsFaulted)
+                        switch (readText.Status)
                         {
-                            if (readText.Exception is AggregateException)
-                            {
+                            case TaskStatus.Faulted:
                                 Exception ex = readText.Exception;
                                 while (ex is AggregateException && ex.InnerException != null)
                                     ex = ex.InnerException;
                                 // do something with ex
-                            }
-
-                            return null;
-                        }
-                        else if (readText.IsCanceled)
-                        {
-                            // do something because Task cancelled
-                            return null;
-                        }
-                        else
-                        {
-                            return WordRegex.Value.Split(readText.Result)
-                                .Where(w => !IgnoreWords.Contains(w));
+                                return null;
+                            case TaskStatus.Canceled:
+                                // do something because Task cancelled
+                                return null;
+                            default:
+                                return WordRegex.Value.Split(readText.Result)
+                                    .Where(w => !IgnoreWords.Contains(w));
                         }
                     })
                     .ContinueWith(words =>
                     {
-                        if (words.IsFaulted)
+                        switch (words.Status)
                         {
-                            if (words.Exception is AggregateException)
-                            {
+                            case TaskStatus.Faulted:
                                 Exception ex = words.Exception;
                                 while (ex is AggregateException && ex.InnerException != null)
                                     ex = ex.InnerException;
                                 // do something with ex
-                            }
-
-                            return null;
-                        }
-                        else if (words.IsCanceled)
-                        {
-                            // do something because Task cancelled
-                            return null;
-                        }
-                        else
-                        {
-                            return wordsLookup.Traverse(wl =>
-                                JaroWinklerModule.bestMatchTask(words.Result, wl, threshold));
+                                return null;
+                            case TaskStatus.Canceled:
+                                // do something because Task cancelled
+                                return null;
+                            default:
+                                return wordsLookup.Traverse(wl =>
+                                    JaroWinklerModule.bestMatchTask(words.Result, wl, threshold));
                         }
                     }).Unwrap();
 
-                matcheSet.AddRange(bestMatches.Flatten());
+                matchSet.AddRange(bestMatches.Flatten());
             }
 
-            return PrintSummary(matcheSet);
+            return PrintSummary(matchSet);
         }
 
 
-        public static async Task<IDictionary<string, HashSet<string>>>
-            RunFuzzyMatchTaskComposition(string[] wordsLookup, IEnumerable<string> files)
+        public static Task<IDictionary<string, HashSet<string>>>
+            RunFuzzyMatchTaskComposition(
+                string[] wordsLookup, 
+                IEnumerable<string> files)
         {
             // A better apporach is to create a custom operator that preserves
             // the continuation semantic, while handling cases of error, exception and transformation
@@ -164,17 +158,16 @@ namespace ParallelPatterns
             // Task<TOut> SelectMany<TIn, TMid, TOut>(this Task<TIn> input, Func<TIn, Task<TMid>> f, Func<TIn, TMid, TOut> projection)
 
             return
-                await files.Traverse(file => File.ReadAllTextAsync(file))
+                files.Traverse(file => File.ReadAllTextAsync(file))
                     .Then(fileContent =>
-                    {
-                        return fileContent.SelectMany(text => WordRegex.Value.Split(text))
-                            .Where(w => !IgnoreWords.Contains(w))
-                            .AsSet();
-                    })
+                         fileContent
+                             .SelectMany(text => WordRegex.Value.Split(text))
+                             .Where(w => !IgnoreWords.Contains(w))
+                             .AsSet()
+                    )
                     .Then(wordsSplit =>
-                    {
-                        return wordsLookup.Traverse(wl => JaroWinklerModule.bestMatchTask(wordsSplit, wl, threshold));
-                    })
+                        wordsLookup.Traverse(wl => JaroWinklerModule.bestMatchTask(wordsSplit, wl, threshold))
+                    )
                     .Then(matcheSet => PrintSummary(matcheSet.Flatten().AsSet()));
 
             // NOTES
@@ -190,7 +183,7 @@ namespace ParallelPatterns
             // Here is the code that replaces the previus code.
             
             //return
-            //    await files.Traverse(file => ReadFileLinesAndFlatten(file))
+            //    files.Traverse(file => ReadFileLinesAndFlatten(file))
             //        .Then(wordsSplit =>
             //        {
             //            var words = wordsSplit.Flatten();
@@ -206,18 +199,21 @@ namespace ParallelPatterns
             Task<string[]> readFileLinesTask = File.ReadAllLinesAsync(file);
 
             readFileLinesTask.ContinueWith(fs =>
-            {
-                return fs.Result.Traverse(line =>
+                fs.Result.Traverse(line =>
                     WordRegex.Value.Split(line)
-                        .Where(w => !IgnoreWords.Contains(w)));
-            }).ContinueWith(t =>
-                tcs.FromTask(t, task => task.Result.Flatten().AsSet()));
+                        .Where(w => !IgnoreWords.Contains(w))
+                )
+            ).ContinueWith(t =>
+                tcs.FromTask(t, task => task.Result.Flatten().AsSet())
+            );
             return tcs.Task;
         }
 
         
         public static async Task<IDictionary<string, HashSet<string>>>
-            RunFuzzyMatchPLINQ(string[] wordsLookup, IEnumerable<string> files)
+            RunFuzzyMatchPLINQ(
+                string[] wordsLookup, 
+                IEnumerable<string> files)
         {
             // TODO (2) : After have copmletd TODO (1), we should be able to implement 
             // effortlessly a LINQ pattern using the Task.
@@ -230,27 +226,28 @@ namespace ParallelPatterns
             // 
             // Then uncomment the following code, add the missing code and run it
 
-//            var matcheSet = await (
-//                from contentFile in files.Traverse(f => File.ReadAllTextAsync(f))
-//                from words in contentFile.Traverse(text =>
-//                    WordRegex.Value.Split(text).Where(w => !IgnoreWords.Contains(w)))
-//                let wordSet = words.Flatten().AsSet()
-//                // TODO (2)
-//                from bestMatch in wordsLookup.Traverse(wl => JaroWinklerModule.bestMatchTask(wordSet, wl, threshold))
-//                select bestMatch.Flatten());
-
-            var matcheSet = Enumerable.Empty<WordDistanceStruct>();
+            var matchSet = Enumerable.Empty<WordDistanceStruct>();
+            
+            // var matchSet = await (
+            //    from contentFile in files.Traverse(f => File.ReadAllTextAsync(f))
+            //    from words in contentFile.Traverse(text =>
+            //        WordRegex.Value.Split(text).Where(w => !IgnoreWords.Contains(w)))
+            //    let wordSet = words.Flatten().AsSet()
+            //    // TODO (2)
+            //    from bestMatch in wordsLookup.Traverse(wl => JaroWinklerModule.bestMatchTask(wordSet, wl, threshold))
+            //    select bestMatch.Flatten());
+            
             
             // NOTES
             // Here the code that leverages the "ReadFileLinesAndFlatten" method
             
-            //var matcheSet = await (
+            //var matchSet = await (
             //    from contentFile in files.Traverse(f => ReadFileLinesAndFlatten(f))
             //    let wordSet = contentFile.Flatten().AsSet()
             //    from bestMatch in wordsLookup.Traverse(wl => JaroWinklerModule.bestMatchTask(wordSet, wl, threshold))
             //    select bestMatch.Flatten());
 
-            return PrintSummary(matcheSet.AsSet());
+            return PrintSummary(matchSet.AsSet());
         }
     }
 }

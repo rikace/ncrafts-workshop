@@ -2,19 +2,19 @@
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
-using System.Net;
+using System.Net.Http;
 
 namespace ParallelPatterns
 {
     public class AgentAggregate
     {
-        public static string createFileNameFromUrl(string url) =>
+        private static string CreateFileNameFromUrl(string _) =>
             Path.Combine(Path.GetTempPath(), Path.GetTempFileName());
 
         public static void Run()
         {
-            //   Producer/consumer using TPL Dataflow
-            List<string> urls = new List<string>
+            // Producer/consumer using TPL Dataflow
+            var urls = new List<string>
             {
                 @"http://www.google.com",
                 @"http://www.microsoft.com",
@@ -28,15 +28,16 @@ namespace ParallelPatterns
             urls.Aggregate(ImmutableDictionary<string, string>.Empty,
                 (state, url) =>
                 {
-                    if (!state.TryGetValue(url, out string content))
-                        using (var webClient = new WebClient())
-                        {
-                            content = webClient.DownloadString(url);
-                            System.IO.File.WriteAllText(createFileNameFromUrl(url), content);
-                            return state.Add(url, content);
-                        }
-
-                    return state;
+                    if (state.TryGetValue(url, out var content)) 
+                        return state;
+                    
+                    using (var webClient = new HttpClient())
+                    {
+                        System.Console.WriteLine($"Downloading '{url}' sync ...");
+                        content = webClient.GetStringAsync(url).GetAwaiter().GetResult();
+                        File.WriteAllText(CreateFileNameFromUrl(url), content);
+                        return state.Add(url, content);
+                    }
                 });
 
             // TODO (8)  
@@ -51,7 +52,7 @@ namespace ParallelPatterns
 
 
             // run this code 
-            urls.ForEach(url => { agentStateful.Post(url); });
+            urls.ForEach(agentStateful.Post);
         }
     }
 }

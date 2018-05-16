@@ -4,21 +4,22 @@ open System.Threading.Tasks
 open System.Runtime.CompilerServices
 
 [<AutoOpen>]
-module ParallelPatternsFsharpHelpers = 
+module ParallelPatternsFsharpHelpers =
 
     type Agent<'T> = MailboxProcessor<'T>
-    
+
     [<RequireQualifiedAccess>]
-    module Async =     
+    module Async =
         let inline awaitPlainTask (task: Task) =
             let continuation (t : Task) : unit =
                 match t.IsFaulted with
                 | true -> raise t.Exception
                 | arg -> ()
             task.ContinueWith continuation |> Async.AwaitTask
-        let inline startAsPlainTask (work : Async<unit>) = Task.Factory.StartNew(fun () -> work |> Async.RunSynchronously)
+        let inline startAsPlainTask (work : Async<unit>) =
+            Task.Factory.StartNew(fun () -> work |> Async.RunSynchronously)
 
-    
+
 open System.Runtime.CompilerServices
 
 [<Sealed; Extension>]
@@ -47,10 +48,10 @@ type public FSharpFuncUtils =
 
     [<Extension>]
     static member Create<'a> (func:System.Action<'a>) = FSharpFuncUtils.ToFSharpAction func
-        
+
     [<Extension>]
     static member Create<'a,'b> (func:System.Action<'a,'b>) = FSharpFuncUtils.ToFSharpAction func
-    
+
     [<Extension>]
     static member Create<'a,'b> (func:System.Func<'a,'b>) = FSharpFuncUtils.ToFSharpFunc func
 
@@ -58,4 +59,4 @@ type public FSharpFuncUtils =
     static member Create<'a,'b,'c> (func:System.Func<'a,'b,'c>) = FSharpFuncUtils.ToFSharpFunc func
 
     [<Extension>]
-    static member Create<'a,'b,'c,'d> (func:System.Func<'a,'b,'c,'d>) = FSharpFuncUtils.ToFSharpFunc func     
+    static member Create<'a,'b,'c,'d> (func:System.Func<'a,'b,'c,'d>) = FSharpFuncUtils.ToFSharpFunc func

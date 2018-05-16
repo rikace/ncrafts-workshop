@@ -10,7 +10,7 @@ module JaroWinkler =
         type WordDistanceStruct(word : string, bestMatch:string, distance : float) =
             member this.Word = word
             member this.Distance = distance
-            member this.Match = bestMatch 
+            member this.Match = bestMatch
 
     open System
     open System.Threading
@@ -19,13 +19,6 @@ module JaroWinkler =
 
     [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix); RequireQualifiedAccess>]
     module private Array =
-        let inline last (array:_[]) = array.[array.Length - 1]
-
-        let inline tryLast (array:_[]) =
-            match array with
-            | null | [||] -> None
-            | [|x|] -> Some(x)
-            | a -> Some(a.[a.Length - 1])
 
         let inline tryLastOption (array:_[] option) =
             match array with
@@ -153,28 +146,28 @@ module JaroWinkler =
 
     let bestMatch (words : string seq) (input : string) (threshold:float) : WordDistanceStruct[] =
         let inputUpper = input.ToUpper()
-        words        
+        words
         |> Seq.map(fun s -> s.ToUpper())
         |> Seq.filter(fun w -> abs (w.Length - input.Length) <= 3)
         |> Seq.map (fun w -> WordDistanceStruct(input, w, distance w input))
         |> Seq.filter(fun w -> w.Distance <= threshold)
         |> Seq.sortByDescending(fun x -> x.Distance)
         |> Seq.toArray
-                
+
     let bestMatchTask (words : string seq) (input : string) (threshold:float) : Task<WordDistanceStruct[]> =
         Task.Run(fun () ->
             let inputUpper = input.ToUpper()
-            words        
+            words
             |> Seq.map(fun s -> s.ToUpper())
             |> Seq.filter(fun w -> abs (w.Length - input.Length) <= 3)
             |> Seq.map (fun w -> WordDistanceStruct(input, w, distance w input))
             |> Seq.filter(fun w -> w.Distance <= threshold)
             |> Seq.sortByDescending(fun x -> x.Distance)
             |> Seq.toArray)
-                    
+
     module Parallel =
         let bestMatch (words : string []) (input : string) (threshold:float) =
-            let inputUpper = input.ToUpper()   
+            let inputUpper = input.ToUpper()
             let result =
                 words
                 |> Array.Parallel.map(fun s -> s.ToUpper())

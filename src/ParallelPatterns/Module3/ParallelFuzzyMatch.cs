@@ -17,7 +17,7 @@ namespace ParallelPatterns
 {
     public partial class ParallelFuzzyMatch
     {
-        public static async Task RunFuzzyMatchDataFlow(string[] wordsLookup, IEnumerable<string> files)
+        public static async Task RunFuzzyMatchDataFlow(string[] wordsLookup, IList<string> files)
         {
             var cts = new CancellationTokenSource();
             var opt = new ExecutionDataflowBlockOptions
@@ -27,39 +27,48 @@ namespace ParallelPatterns
                 CancellationToken = cts.Token
             };
 
-            int fileCount = files.Count();
+            int fileCount = files.Count;
 
             var inputBlock = new BufferBlock<string>(opt);
 
             var readLinesBlock =
-                new TransformBlock<string, string>(async file => await File.ReadAllTextAsync(file), opt);
+                new TransformBlock<string, string>(
+                    async file => await File.ReadAllTextAsync(file, cts.Token), opt);
 
-            var splitWordsBlock = new TransformBlock<string, HashSet<string>>(
-                text => { return WordRegex.Value.Split(text).Where(w => !IgnoreWords.Contains(w)).AsSet(); }, opt);
+            var splitWordsBlock = 
+                new TransformBlock<string, HashSet<string>>(
+                    text => WordRegex.Value.Split(text).Where(w => !IgnoreWords.Contains(w)).AsSet(), opt);
 
-            var batch = new BatchBlock<HashSet<string>>(fileCount);
+            var batch = 
+                new BatchBlock<HashSet<string>>(fileCount);
 
-            var foundMatchesBlock = new TransformBlock<HashSet<string>[], WordDistanceStruct[]>(async wordSet =>
-            {
-                var wordSetFlatten = wordSet.Flatten().AsSet();
-                var matches =
-                    await wordsLookup.Traverse(wl => JaroWinklerModule.bestMatchTask(wordSetFlatten, wl, threshold));
-                return matches.Flatten().ToArray();
-            }, opt);
+            var foundMatchesBlock =
+                new TransformBlock<HashSet<string>[], WordDistanceStruct[]>(
+                    async wordSet =>
+                    {
+                        var wordSetFlatten = wordSet.Flatten().AsSet();
+                        var matches =
+                            await wordsLookup.Traverse(wl =>
+                                JaroWinklerModule.bestMatchTask(wordSetFlatten, wl, threshold));
+                        return matches.Flatten().ToArray();
+                    }, opt);
 
 
             // TODO (5)
             // Implement a block name "printBlock", which prints the output of the foundMatchesBlock using the "PrintSummary" method 
             // Then link the block to the "foundMatchesBlock" block
-
+            
             /* code here */
-
+            
+            // var printBlock = ...
+            
             // TODO (6)
             // After have completed TODO (5), remove or unlink the printBlock, and replace the output of the "foundMatchesBlock" block 
             // with Reactive Extensions "AsObservable", maintaining the call to the "PrintSummary" method 
-
-            /* code here */
-
+            
+            /* code here */ 
+            // foundMatchesBlock ...  
+            
             var linkOptions = new DataflowLinkOptions {PropagateCompletion = true};
 
             IDisposable disposeAll = new CompositeDisposable(
@@ -69,17 +78,17 @@ namespace ParallelPatterns
                 batch.LinkTo(foundMatchesBlock, linkOptions)
                 // foundMatchesBlock.LinkTo(printBlock)
             );
-            cts.Token.Register(() => disposeAll.Dispose());
+            cts.Token.Register(disposeAll.Dispose);
 
             foreach (var file in files)
-                await inputBlock.SendAsync(file);
+                await inputBlock.SendAsync(file, cts.Token);
 
             inputBlock.Complete();
             await foundMatchesBlock.Completion.ContinueWith(_ => disposeAll.Dispose());
         }
 
         // C# example 
-        public static async Task RunFuzzyMatchAgentCSharp(string[] wordsLookup, IEnumerable<string> files)
+        public static async Task RunFuzzyMatchAgentCSharp(string[] wordsLookup, IList<string> files)
         {
             var cts = new CancellationTokenSource();
             var opt = new ExecutionDataflowBlockOptions
@@ -92,20 +101,24 @@ namespace ParallelPatterns
             var inputBlock = new BufferBlock<string>(opt);
 
             var readLinesBlock =
-                new TransformBlock<string, string>(async file => await File.ReadAllTextAsync(file), opt);
+                new TransformBlock<string, string>(
+                    async file => await File.ReadAllTextAsync(file, cts.Token), opt);
 
-            var splitWordsBlock = new TransformBlock<string, string[]>(text =>
-                WordRegex.Value.Split(text).Where(w => !IgnoreWords.Contains(w)).AsSet().ToArray(), opt);
+            var splitWordsBlock = 
+                new TransformBlock<string, string[]>(
+                    text => WordRegex.Value.Split(text).Where(w => !IgnoreWords.Contains(w)).AsSet().ToArray(), opt);
 
-            var foundMatchesBlock = new TransformBlock<string[], WordDistanceStruct[]>(async wordSet =>
-            {
-                var matches = await wordsLookup.Traverse(wl => JaroWinklerModule.bestMatchTask(wordSet, wl, threshold));
-                return matches.Flatten().ToArray();
-            }, opt);
+            var foundMatchesBlock =
+                new TransformBlock<string[], WordDistanceStruct[]>(async wordSet =>
+                {
+                    var matches =
+                        await wordsLookup.Traverse(wl => JaroWinklerModule.bestMatchTask(wordSet, wl, threshold));
+                    return matches.Flatten().ToArray();
+                }, opt);
 
-
+            
             var linkOptions = new DataflowLinkOptions {PropagateCompletion = true};
-
+            
             // TODO (7) (for C#)
             // Implement a stateful agent using the TPL Dataflow.
             // The Agent should have an internal state protected from external access.
@@ -114,31 +127,33 @@ namespace ParallelPatterns
             // (see AgentAggregator.cs)
 
             /* code here
-             
-               var agent = Agent.Start  ... 
-             */
-
+ 
+                var agent = Agent.Start  ... 
+            */
+            
+            
             IDisposable disposeAll = new CompositeDisposable(
                 inputBlock.LinkTo(readLinesBlock, linkOptions),
                 readLinesBlock.LinkTo(splitWordsBlock, linkOptions),
                 splitWordsBlock.LinkTo(foundMatchesBlock, linkOptions)
 
-            // agent.AsObservable().Subscribe(summaryMathces =>
-            //        PrintSummary(summaryMathces))
+                // agent.AsObservable().Subscribe(summaryMathces =>
+                //        PrintSummary(summaryMathces))
             );
 
-            cts.Token.Register(() => disposeAll.Dispose());
+            cts.Token.Register(disposeAll.Dispose);
 
             foreach (var file in files)
-                await inputBlock.SendAsync(file);
+                await inputBlock.SendAsync(file, cts.Token);
 
             inputBlock.Complete();
-            await foundMatchesBlock.Completion.ContinueWith(_ => disposeAll.Dispose());
+            await foundMatchesBlock.Completion.ContinueWith(_ => 
+                disposeAll.Dispose());
         }
-
-
+        
+        
         // F# example
-        public static async Task RunFuzzyMatchAgentFSharp(string[] wordsLookup, IEnumerable<string> files)
+        public static async Task RunFuzzyMatchAgentFSharp(string[] wordsLookup, IList<string> files)
         {
             var cts = new CancellationTokenSource();
             var opt = new ExecutionDataflowBlockOptions
@@ -151,20 +166,23 @@ namespace ParallelPatterns
             var inputBlock = new BufferBlock<string>(opt);
 
             var readLinesBlock =
-                new TransformBlock<string, string>(async file => await File.ReadAllTextAsync(file), opt);
+                new TransformBlock<string, string>(
+                    file => File.ReadAllTextAsync(file, cts.Token), opt);
 
-            var splitWordsBlock = new TransformBlock<string, string[]>(text =>
-                WordRegex.Value.Split(text).Where(w => !IgnoreWords.Contains(w)).AsSet().ToArray(), opt);
+            var splitWordsBlock = new TransformBlock<string, string[]>(
+                text => WordRegex.Value.Split(text).Where(w => !IgnoreWords.Contains(w)).AsSet().ToArray(), opt);
 
-            var foundMatchesBlock = new TransformBlock<string[], WordDistanceStruct[]>(async wordSet =>
-            {
-                var matches = await wordsLookup.Traverse(wl => JaroWinklerModule.bestMatchTask(wordSet, wl, threshold));
-                return matches.Flatten().ToArray();
-            }, opt);
+            var foundMatchesBlock =
+                new TransformBlock<string[], WordDistanceStruct[]>(async wordSet =>
+                {
+                    var matches =
+                        await wordsLookup.Traverse(wl => JaroWinklerModule.bestMatchTask(wordSet, wl, threshold));
+                    return matches.Flatten().ToArray();
+                }, opt);
 
-
+            
             var linkOptions = new DataflowLinkOptions {PropagateCompletion = true};
-
+            
             // TODO (7) (for F#)
             // Implement a Reactive MailboxProcessor in F#.
             // Go to the Fsharp project, Module 3 and follow the instructions (7.a)
@@ -176,17 +194,19 @@ namespace ParallelPatterns
                 var agent = new ReactiveAgent.AgentObservable ... 
             */
          
+            
             IDisposable disposeAll = new CompositeDisposable(
                 inputBlock.LinkTo(readLinesBlock, linkOptions),
                 readLinesBlock.LinkTo(splitWordsBlock, linkOptions),
                 splitWordsBlock.LinkTo(foundMatchesBlock, linkOptions)
-                // agent.AsObservable().Subscribe(summaryMathces => PrintSummary(summaryMathces))
+                //foundMatchesBlock.LinkTo(agent),
+                //agent.AsObservable() ... code missing here
             );
 
-            cts.Token.Register(() => disposeAll.Dispose());
+            cts.Token.Register(disposeAll.Dispose);
 
             foreach (var file in files)
-                await inputBlock.SendAsync(file);
+                await inputBlock.SendAsync(file, cts.Token);
 
             inputBlock.Complete();
             await foundMatchesBlock.Completion.ContinueWith(_ => disposeAll.Dispose());

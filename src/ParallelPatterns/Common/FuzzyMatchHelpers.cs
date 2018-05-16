@@ -21,13 +21,18 @@ namespace ParallelPatterns.Common
             new Lazy<char[]>(() =>
                 Enumerable.Range(0, 256).Select(c => (char) c).Where(c => Char.IsWhiteSpace(c) || Char.IsPunctuation(c))
                     .ToArray());
-        
-        
+
+        public static Dictionary<string, HashSet<string>> Clone(Dictionary<string, HashSet<string>> state)
+            => state.ToDictionary(x => x.Key, x => new HashSet<string>(x.Value));
+
+
         public static IDictionary<string, HashSet<string>> PrintSummary(
             HashSet<JaroWinklerModule.FuzyMatchStructures.WordDistanceStruct> summaryMathces)
         {
             var matchesDic = summaryMathces
-                .GroupBy(w => w.Word).ToDictionary(k => k.Key,
+                .GroupBy(w => w.Word)
+                .ToDictionary(
+                    k => k.Key,
                     v => v.Select(w => w.Match).AsSet());
             return PrintSummary(matchesDic);
         }

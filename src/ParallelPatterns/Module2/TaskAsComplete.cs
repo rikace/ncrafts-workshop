@@ -7,14 +7,15 @@ using System.Threading.Tasks;
 namespace ParallelPatterns.TaskComposition
 {
     public static class TaskAsComplete
-    {
-        public static IEnumerable<Task<R>> ContinueAsComplete<T, R>(this IEnumerable<T> input,
+    { 
+        public static IEnumerable<Task<R>> ContinueAsComplete<T, R>(
+            this IEnumerable<T> input, 
             Func<T, Task<R>> selector)
         {
             var inputTaskList = (from el in input select selector(el)).ToList();
-
+ 
             var completionSourceList = new List<TaskCompletionSource<R>>(inputTaskList.Count);
-            for (int i = 0; i < inputTaskList.Count; i++)
+            for (var i = 0; i < inputTaskList.Count; i++)
                 completionSourceList.Add(new TaskCompletionSource<R>());
 
             int prevIndex = -1;
@@ -23,8 +24,9 @@ namespace ParallelPatterns.TaskComposition
             Action<Task<R>> continuation = completedTask =>
             {
                 // add code implementation 
+                // Note, the "prevIndex" variable could be used here
             };
-
+            
             foreach (var inputTask in inputTaskList)
             {
                 inputTask.ContinueWith(continuation,
@@ -35,5 +37,6 @@ namespace ParallelPatterns.TaskComposition
 
             return completionSourceList.Select(source => source.Task);
         }
+
     }
 }

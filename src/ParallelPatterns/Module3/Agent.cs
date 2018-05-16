@@ -26,22 +26,8 @@ namespace ParallelPatterns
 
     public class Agent<TMessage, TState> : IAgent<TMessage, TState>
     {
-        private TState state;
-        private readonly TransformBlock<TMessage, TState> actionBlock;
-
-        public Agent(
-            TState initialState,
-            Func<TState, TMessage, Task<TState>> action,
-            CancellationTokenSource cts = null)
-        {
-
-            // TODO (7.a) 
-            // Implement Agent
-            // Initialize local isolated state
-            // Create Dataflow-block that receives and processes the messages, and then update the local state
-           
-            // Add code implementation
-        }
+        private TState _state;
+        private readonly TransformBlock<TMessage, TState> _actionBlock;
 
         public Agent(
             TState initialState,
@@ -49,13 +35,33 @@ namespace ParallelPatterns
             CancellationTokenSource cts = null)
         {
             // TODO (7.a)
+            // Implement Agent
+            // Initialize local isolated state
+            // Create Dataflow-block that receives and processes the messages, and then update the local state
+
+            // Add code implementation
+
+            // Remember, this is a stateful agent
+        }
+
+        public Agent(
+            TState initialState,
+            Func<TState, TMessage, Task<TState>> action,
+            CancellationTokenSource cts = null)
+        {
+            // TODO (7.a)
 
             // Add code implementation
         }
 
-        public Task Send(TMessage message) => actionBlock.SendAsync(message);
-        public void Post(TMessage message) => actionBlock.Post(message);
-        public IObservable<TState> AsObservable() => actionBlock.AsObservable();
-        public TState State => state;
+
+        public Task Send(TMessage message)
+            => _actionBlock.SendAsync(message);
+
+        public void Post(TMessage message)
+            => _actionBlock.Post(message);
+
+        public IObservable<TState> AsObservable()
+            => _actionBlock.AsObservable();
     }
 }

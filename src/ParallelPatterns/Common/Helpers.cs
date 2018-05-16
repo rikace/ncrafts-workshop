@@ -14,12 +14,14 @@ namespace ParallelPatterns.Common
             return allAdded;
         }
 
-        public static IEnumerable<T> Flatten<T>(this IEnumerable<IEnumerable<T>> col) => col.SelectMany(l => l);
+        public static IEnumerable<T> Flatten<T>(this IEnumerable<IEnumerable<T>> col) 
+            => col.SelectMany(l => l);
         
-        public static HashSet<T> AsSet<T>(this IEnumerable<T> col) => new HashSet<T>(col);
+        public static HashSet<T> AsSet<T>(this IEnumerable<T> col) 
+            => new HashSet<T>(col);
 
-        public static HashSet<string> AsSet(this IEnumerable<string> col) => new HashSet<string>(col, StringComparer.OrdinalIgnoreCase);
-        
+        public static HashSet<string> AsSet(this IEnumerable<string> col) 
+            => new HashSet<string>(col, StringComparer.OrdinalIgnoreCase);
         
         public static Func<T1, Func<T2, R>> Curry<T1, T2, R>(this Func<T1, T2, R> func)
             => t1 => t2 => func(t1, t2);

@@ -12,16 +12,15 @@ using System.Threading.Tasks.Dataflow;
 
 namespace ParallelPatterns
 {
-    class Program
+    public static class Program
     {
-        static string[] WordsToSearch = new string[]
+        private static readonly string[] WordsToSearch = 
             {"ENGLISH", "RICHARD", "STEALLING", "MAGIC", "STARS", "MOON", "CASTLE"};
 
 
-        static void Start(IEnumerable<string> files)
+        private static async Task Start(IList<string> files)
         {
-            string help =
-                @"=============================================================
+            Console.WriteLine(@"=============================================================
 Press the number of the method you want to run and press ENTER
 
 (1) RunFuzzyMatchTaskComposition  (TODO 1)
@@ -33,19 +32,21 @@ Press the number of the method you want to run and press ENTER
 (7) RunFuzzyMatchAgentFSharp (TODO 7 F#)
 (8) AgentAggregate (TODO 8 C#)
 =============================================================
-";
-            Console.WriteLine(help);
+");
+            
             var choice = Console.ReadLine();
             var indexChoice = int.Parse(choice);
+            
             switch (indexChoice)
             {
                 case 1:
                     // TODO 1
-                    ParallelFuzzyMatch.RunFuzzyMatchTaskComposition(WordsToSearch, files);
+                    await ParallelFuzzyMatch.RunFuzzyMatchTaskComposition(WordsToSearch, files);
+                    
                     break;
                 case 2:
                     // TODO 2
-                    ParallelFuzzyMatch.RunFuzzyMatchPLINQ(WordsToSearch, files);
+                    await ParallelFuzzyMatch.RunFuzzyMatchPLINQ(WordsToSearch, files);
 
                     break;
                 case 3:
@@ -55,51 +56,57 @@ Press the number of the method you want to run and press ENTER
                     break;
                 case 4:
                     // TODO 4
-                    ParallelFuzzyMatch.RunFuzzyMatchTaskProcessAsCompleteAbstracted(WordsToSearch, files);
+                    await ParallelFuzzyMatch.RunFuzzyMatchTaskProcessAsCompleteAbstracted(WordsToSearch, files);
 
                     break;
                 case 5:
                     // TODO 5 - 6
-                    ParallelFuzzyMatch.RunFuzzyMatchDataFlow(WordsToSearch, files);
+                    await ParallelFuzzyMatch.RunFuzzyMatchDataFlow(WordsToSearch, files);
 
                     break;
                 case 6:
                     // TODO 7 (C#)
-                    ParallelFuzzyMatch.RunFuzzyMatchAgentCSharp(WordsToSearch, files);
+                    await ParallelFuzzyMatch.RunFuzzyMatchAgentCSharp(WordsToSearch, files);
+                    
                     break;
                 case 7:
                     // TODO 7 (F#)
-                    ParallelFuzzyMatch.RunFuzzyMatchAgentFSharp(WordsToSearch, files);
+                    await ParallelFuzzyMatch.RunFuzzyMatchAgentFSharp(WordsToSearch, files);
+                    
                     break;
                 case 8:
+                    // TODO 8 (C#)
                     AgentAggregate.Run();
+                    
                     break;
                 default:
                     throw new Exception("Selection not supported");
             }
         }
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
-            IEnumerable<string> files = Directory.EnumerateFiles("./Data/Text", "*.txt")
-                .Select(f => new FileInfo(f))
-                .OrderBy(f => f.Length)
-                .Select(f => f.FullName)
-                .Take(5);
+            IList<string> files =
+                    Directory.EnumerateFiles("./Data/Text", "*.txt")
+                        .Select(f => new FileInfo(f))
+                        .OrderBy(f => f.Length)
+                        .Select(f => f.FullName)
+                        .Take(5).ToList();
 
-           // Start(files);
+            var watch = Stopwatch.StartNew();
 
-            // Wait in a console project is ok. C# 7.1 allows to declare a no-blocking entry point in thw Main method
-            // (This is not supported in dotent core)
+            await Start(files);
+            watch.Stop();
+
+            Console.WriteLine($"<< DONE in {watch.Elapsed.ToString()} >>");
+            Console.ReadLine();
+
 
             // Examples
             // ParallelFuzzyMatch.RunFuzzyMatchSequential(WordsToSearch, files);
             // ParallelFuzzyMatch.RunFuzzyMatchTaskContinuation(WordsToSearch, files);
-            ParallelFuzzyMatch.RunFuzzyMatchTaskProcessAsCompleteAbstracted(WordsToSearch, files);
+            // await ParallelFuzzyMatch.RunFuzzyMatchTaskComposition(WordsToSearch, files);
             
-            
-
-
             // TODO 1
             // ParallelFuzzyMatch.RunFuzzyMatchTaskComposition(WordsToSearch, files);
             // TODO 2
@@ -115,10 +122,6 @@ Press the number of the method you want to run and press ENTER
             // ParallelFuzzyMatch.RunFuzzyMatchAgentCSharp(WordsToSearch, files);
             // TODO 7 (F#)
             // ParallelFuzzyMatch.RunFuzzyMatchAgentFSharp(WordsToSearch, files);
-
-
-            Console.WriteLine("<< DONE >>");
-            Console.ReadLine();
         }
     }
 }
