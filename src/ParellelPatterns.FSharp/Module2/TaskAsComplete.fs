@@ -20,12 +20,9 @@ module TaskCombinators =
             let prevIndex = ref -1
             
             // TODO 4
-            let continuation = fun (completedTask:Task<_>) ->
-                let index = Interlocked.Increment(prevIndex)
-                let source = completionSourceList.[index]
-                if completedTask.Status = TaskStatus.Canceled then source.TrySetCanceled()
-                elif completedTask.Status = TaskStatus.Faulted then source.TrySetException(completedTask.Exception.InnerExceptions)
-                else source.TrySetResult(completedTask.Result)
+            // add missing code here 
+            let continuation = fun (completedTask:Task<_>) -> ()
+            
 
             for inputTask in inputTaskList do
                 inputTask.ContinueWith(continuation, CancellationToken.None,  TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default) |> ignore

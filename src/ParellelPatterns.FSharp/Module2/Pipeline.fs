@@ -53,16 +53,17 @@ module Pipeline =
 
         // TODO (3.a)
         let then' (nextFunction:Func<'b,'c>) =
-            Pipeline( (Some(composeFunc func nextFunction)), None) :> IPipeline<_,_>
+            Unchecked.defaultof<IPipeline<'a ,'c>>
 
         // TODO (3.a)
-        let thenTask (nextFunction:Func<'b, Task<'c>>) =
-            let task arg = funcTask.Invoke(arg)
-            Pipeline(None, Some(Func<'a, Task<'c>>(fun arg -> composeTasks (task arg) nextFunction))) :> IPipeline<_,_>
-
+        // complete code 
+        let thenTask (nextFunction:Func<'b, Task<'c>>) = 
+            Unchecked.defaultof<IPipeline<'a ,'c>>
+        
         // TODO (3.b)
-        let enqueue (input:'a) (callback:Func<('a * 'b), unit>) =
-            BlockingCollection<Continuation<_,_>>.AddToAny(continuations, Continuation(input, callback))
+        // complete code (remove 0 and add implementation)
+        let enqueue (input:'a) (callback:Func<('a * 'b), unit>) = 0
+        
 
         let stop() = for continuation in continuations do continuation.CompleteAdding()
 
