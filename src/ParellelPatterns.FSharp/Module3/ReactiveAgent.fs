@@ -73,11 +73,22 @@ module ReactiveAgent =
         // Then, expose the IObservable interface throughout an instance method called "AsObservable". This methid will be used
         // to register the output after each message is processed.
 
+
+        interface IObserver<'T> with
+            member x.OnNext value   = x.Next(value)
+            member x.OnError ex     = x.Error(ex)
+            member x.OnCompleted()  = x.Completed()
+
+        interface IObservable<'U> with
+            member x.Subscribe(observer:IObserver<'U>) =
+                observer |> Message.Add |> mbox.Post
+                { new IDisposable with
+                    member x.Dispose() =
+                        observer |> Message.Remove |> mbox.Post }
+
         interface IAgent<'T, 'U> with
             member x.Post(msg) = Message.Next(msg)  |> mbox.Post
             member x.Send(msg) = async { Message.Next(msg)  |> mbox.Post } |> Async.startAsPlainTask
             member x.AsObservable() = x.AsObservable()
 
-        // TODO 7.b
-        // after have implemented 7.a, complete this method AsObservable
-        member x.AsObservable() = Unchecked.defaultof<IObservable<_>>
+        member x.AsObservable() = (x :> IObservable<'U>)

@@ -64,24 +64,19 @@ namespace ParallelPatterns
         public Pipeline<TOutput, TMid> Then<TMid>(
             Func<TOutput, Task<TMid>> project,
             CancellationToken token = new CancellationToken())
-        {
-            // Add code implementation
-            return default(Pipeline<TOutput, TMid>);
-        }
+            => new Pipeline<TOutput, TMid>(project, Output, token);
 
-        // TODO (3.a)
         public Pipeline<TOutput, TMid> Then<TMid>(
             Func<TOutput, TMid> project,
             CancellationToken token = new CancellationToken())
-        {
-            // Add code implementation
-            return default(Pipeline<TOutput, TMid>);
-        }
+            => new Pipeline<TOutput, TMid>(project, Output, token);
         
         // TODO (3.b)
         public void Enqueue(TInput item)
         {
-            // Add code implementation
+            var sw = new SpinWait();
+            while (!(BlockingCollection<TInput>.TryAddToAny(_input, item) >= 0))
+                sw.SpinOnce();
         }
 
         private async Task Run()

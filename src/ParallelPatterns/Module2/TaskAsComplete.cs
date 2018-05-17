@@ -23,8 +23,21 @@ namespace ParallelPatterns.TaskComposition
             // TODO 4
             Action<Task<R>> continuation = completedTask =>
             {
-                // add code implementation 
-                // Note, the "prevIndex" variable could be used here
+                int index = Interlocked.Increment(ref prevIndex);
+                var source = completionSourceList[index];
+
+                switch (completedTask.Status)
+                {
+                    case TaskStatus.Canceled:
+                        source.TrySetCanceled();
+                        break;
+                    case TaskStatus.Faulted:
+                        source.TrySetException(completedTask.Exception.InnerExceptions);
+                        break;
+                    default:
+                        source.TrySetResult(completedTask.Result);
+                        break;
+                }
             };
             
             foreach (var inputTask in inputTaskList)

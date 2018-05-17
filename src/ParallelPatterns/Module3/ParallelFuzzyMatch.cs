@@ -57,26 +57,24 @@ namespace ParallelPatterns
             // TODO (5)
             // Implement a block name "printBlock", which prints the output of the foundMatchesBlock using the "PrintSummary" method 
             // Then link the block to the "foundMatchesBlock" block
-            
-            /* code here */
-            
-            // var printBlock = ...
-            
+            var printBlock = 
+                new ActionBlock<WordDistanceStruct[]>(
+                    r => PrintSummary(r.AsSet()),
+                    new ExecutionDataflowBlockOptions {SingleProducerConstrained = true});
+
             // TODO (6)
             // After have completed TODO (5), remove or unlink the printBlock, and replace the output of the "foundMatchesBlock" block 
             // with Reactive Extensions "AsObservable", maintaining the call to the "PrintSummary" method 
-            
-            /* code here */ 
-            // foundMatchesBlock ...  
-            
+            //foundMatchesBlock.AsObservable().Subscribe(summaryMathces => PrintSummary(summaryMathces.AsSet()));
+
             var linkOptions = new DataflowLinkOptions {PropagateCompletion = true};
 
             IDisposable disposeAll = new CompositeDisposable(
                 inputBlock.LinkTo(readLinesBlock, linkOptions),
                 readLinesBlock.LinkTo(splitWordsBlock, linkOptions),
                 splitWordsBlock.LinkTo(batch, linkOptions),
-                batch.LinkTo(foundMatchesBlock, linkOptions)
-                // foundMatchesBlock.LinkTo(printBlock)
+                batch.LinkTo(foundMatchesBlock, linkOptions),
+                foundMatchesBlock.LinkTo(printBlock)
             );
             cts.Token.Register(disposeAll.Dispose);
 
@@ -125,20 +123,37 @@ namespace ParallelPatterns
             // The function passed in the constractor applies a project/reduce to the incoming messages and in the current state,
             // to return a new state
             // (see AgentAggregator.cs)
+            var agent = Agent.Start(new Dictionary<string, HashSet<string>>(),
+                (Dictionary<string, HashSet<string>> state, WordDistanceStruct[] matches) =>
+                {
+                    var matchesDic = matches
+                        .GroupBy(w => w.Word)
+                        .ToDictionary(
+                            k => k.Key,
+                            v => v.Select(w => w.Match).AsSet());
 
-            /* code here
- 
-                var agent = Agent.Start  ... 
-            */
-            
+                    var newState = Clone(state);
+                    foreach (var match in matchesDic)
+                    {
+                        if (newState.TryGetValue(match.Key, out HashSet<string> values))
+                        {
+                            values.AddRange(match.Value);
+                            newState[match.Key] = values;
+                        }
+                        else
+                            newState.Add(match.Key, match.Value);
+                    }
+
+                    return newState;
+                });
             
             IDisposable disposeAll = new CompositeDisposable(
                 inputBlock.LinkTo(readLinesBlock, linkOptions),
                 readLinesBlock.LinkTo(splitWordsBlock, linkOptions),
-                splitWordsBlock.LinkTo(foundMatchesBlock, linkOptions)
-
-                // agent.AsObservable().Subscribe(summaryMathces =>
-                //        PrintSummary(summaryMathces))
+                splitWordsBlock.LinkTo(foundMatchesBlock, linkOptions),
+                foundMatchesBlock.LinkTo(agent),
+                agent.AsObservable().Subscribe(
+                    summaryMathces => PrintSummary(summaryMathces))
             );
 
             cts.Token.Register(disposeAll.Dispose);
@@ -152,7 +167,7 @@ namespace ParallelPatterns
         }
         
         
-        // F# example
+       // Example F#
         public static async Task RunFuzzyMatchAgentFSharp(string[] wordsLookup, IList<string> files)
         {
             var cts = new CancellationTokenSource();
@@ -189,18 +204,41 @@ namespace ParallelPatterns
             // then, uncomment the following code and remove the previous code that uses
             // the Agent based on TPL Dataflow  
 
-            /* code here
- 
-                var agent = new ReactiveAgent.AgentObservable ... 
-            */
-         
+            var agent =
+                new ReactiveAgent.AgentObservable<WordDistanceStruct[], Dictionary<string, HashSet<string>>>
+                (new Dictionary<string, HashSet<string>>(),
+                    (state, matches) =>
+                    {
+                        var matchesDic = matches
+                            .GroupBy(w => w.Word).ToDictionary(k => k.Key,
+                                v => v.Select(w => w.Match).AsSet());
+
+                        // Clone is important to be race condition free
+                        // or use an immutable collection
+                        var newState = Clone(state);
+                        foreach (var match in matchesDic)
+                        {
+                            if (newState.TryGetValue(match.Key, out HashSet<string> values))
+                            {
+                                values.AddRange(match.Value);
+                                newState[match.Key] = values;
+                            }
+                            else
+                                newState.Add(match.Key, match.Value);
+                        }
+
+                        return newState;
+                    });
+                            
             
+
             IDisposable disposeAll = new CompositeDisposable(
                 inputBlock.LinkTo(readLinesBlock, linkOptions),
                 readLinesBlock.LinkTo(splitWordsBlock, linkOptions),
-                splitWordsBlock.LinkTo(foundMatchesBlock, linkOptions)
-                //foundMatchesBlock.LinkTo(agent),
-                //agent.AsObservable() ... code missing here
+                splitWordsBlock.LinkTo(foundMatchesBlock, linkOptions),
+                foundMatchesBlock.LinkTo(agent),
+                agent.AsObservable().Subscribe(
+                    summaryMathces => PrintSummary(summaryMathces))
             );
 
             cts.Token.Register(disposeAll.Dispose);

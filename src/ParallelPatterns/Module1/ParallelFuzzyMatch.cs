@@ -224,18 +224,16 @@ namespace ParallelPatterns
             // Task<TOut> SelectMany<TIn, TOut>(this Task<TIn> first, Func<TIn, Task<TOut>> next)
             // Task<TOut> Select<TIn, TOut>(this Task<TIn> task, Func<TIn, TOut> projection)
             // 
-            // Then uncomment the following code, add the missing step (code) and run it
+            // Then uncomment the following code, add the missing code and run it
 
-            var matchSet = Enumerable.Empty<WordDistanceStruct>();
-            
-            // var matchSet = await (
-            //    from contentFile in files.Traverse(f => File.ReadAllTextAsync(f))
-            //    from words in contentFile.Traverse(text =>
-            //        WordRegex.Value.Split(text).Where(w => !IgnoreWords.Contains(w)))
-            //    let wordSet = words.Flatten().AsSet()
-            //    // TODO (2)
-            //    ... missing step here 
-            //    select bestMatch.Flatten());
+            var matchSet = await (
+                from contentFile in files.Traverse(f => File.ReadAllTextAsync(f))
+                from words in contentFile.Traverse(text =>
+                    WordRegex.Value.Split(text).Where(w => !IgnoreWords.Contains(w)))
+                let wordSet = words.Flatten().AsSet()
+                // TODO (2)
+                from bestMatch in wordsLookup.Traverse(wl => JaroWinklerModule.bestMatchTask(wordSet, wl, threshold))
+                select bestMatch.Flatten());
             
             
             // NOTES

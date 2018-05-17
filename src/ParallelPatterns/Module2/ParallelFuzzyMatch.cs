@@ -144,6 +144,7 @@ namespace ParallelPatterns
                             {
                                 var finishedMatchTask = matchTask.Result;
                                 matchTasks.Remove(finishedMatchTask);
+                               
                                 matchSet.AddRange(finishedMatchTask.Result);
                             });
                         }

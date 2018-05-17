@@ -96,7 +96,7 @@ Press the number of the method you want to run and press ENTER
             var watch = Stopwatch.StartNew();
 
             await Start(files);
-            watch.Stop();
+           // watch.Stop();
 
             Console.WriteLine($"<< DONE in {watch.Elapsed.ToString()} >>");
             Console.ReadLine();
