@@ -152,7 +152,8 @@ namespace ParallelPatterns
                 readLinesBlock.LinkTo(splitWordsBlock, linkOptions),
                 splitWordsBlock.LinkTo(foundMatchesBlock, linkOptions),
                 foundMatchesBlock.LinkTo(agent),
-                agent.AsObservable().Subscribe(
+                agent.AsObservable()
+                    .Subscribe(
                     summaryMathces => PrintSummary(summaryMathces))
             );
 
@@ -161,9 +162,6 @@ namespace ParallelPatterns
             foreach (var file in files)
                 await inputBlock.SendAsync(file, cts.Token);
 
-            inputBlock.Complete();
-            await foundMatchesBlock.Completion.ContinueWith(_ => 
-                disposeAll.Dispose());
         }
         
         
@@ -246,8 +244,6 @@ namespace ParallelPatterns
             foreach (var file in files)
                 await inputBlock.SendAsync(file, cts.Token);
 
-            inputBlock.Complete();
-            await foundMatchesBlock.Completion.ContinueWith(_ => disposeAll.Dispose());
         }
     }
 }

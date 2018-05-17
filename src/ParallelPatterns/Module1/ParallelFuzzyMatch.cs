@@ -6,7 +6,11 @@ using System.Threading.Tasks;
 using FuzzyMatch;
 using ParallelPatterns.Common;
 using ParallelPatterns.Common.TaskEx;
+#if FSHARP
+using static ParallelPatterns.Fsharp.TaskCompositionEx.TaskEx;
+#else
 using ParallelPatterns.TaskComposition;
+#endif
 using static FuzzyMatch.JaroWinklerModule.FuzyMatchStructures;
 using static ParallelPatterns.Common.FuzzyMatchHelpers;
 

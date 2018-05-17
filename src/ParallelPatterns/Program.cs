@@ -66,7 +66,7 @@ Press the number of the method you want to run and press ENTER
                     break;
                 case 6:
                     // TODO 7 (C#)
-                    await ParallelFuzzyMatch.RunFuzzyMatchAgentCSharp(WordsToSearch, files);
+                     ParallelFuzzyMatch.RunFuzzyMatchAgentCSharp(WordsToSearch, files);
                     
                     break;
                 case 7:
@@ -96,7 +96,7 @@ Press the number of the method you want to run and press ENTER
             var watch = Stopwatch.StartNew();
 
             await Start(files);
-           // watch.Stop();
+            watch.Stop();
 
             Console.WriteLine($"<< DONE in {watch.Elapsed.ToString()} >>");
             Console.ReadLine();

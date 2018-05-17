@@ -64,7 +64,8 @@ namespace ParallelPatterns
                 CancellationToken = cts?.Token ?? CancellationToken.None
             };
             _actionBlock = new TransformBlock<TMessage, TState>(
-                msg => _state = action(_state, msg), options);
+                msg => _state = action(_state, msg)
+                , options);
         }
 
         public Agent(
@@ -80,7 +81,8 @@ namespace ParallelPatterns
                 CancellationToken = cts?.Token ?? CancellationToken.None
             };
             _actionBlock = new TransformBlock<TMessage, TState>(
-                async msg => _state = await action(_state, msg), options);
+                async msg => _state = await action(_state, msg)
+                , options);
         }
 
 
